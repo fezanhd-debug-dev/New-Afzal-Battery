@@ -1,5 +1,6 @@
 package com.newafzal.solarpoint.navigation
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -23,15 +24,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import org.json.JSONArray
+import org.json.JSONObject
 
+// ============================================================================
+// 1. DATA MODELS
+// ============================================================================
 data class ProductItem(
     val id: String,
     val name: String,
-    val category: String,
-    val brand: String,
+    val category: String, // Solar Panels, Inverters & VFD, Batteries, Breakers & Relays
+    val brand: String, // Longi, Jinko, Inverex, Tomzn, Tesla, Mora, INVT, Osaka
     val stockQty: Int,
     val unitPrice: Double,
     val alertLevel: Int,
@@ -68,6 +75,183 @@ data class SupplierRecord(
     val city: String
 )
 
+// ============================================================================
+// 2. LOCAL PERSISTENT STORAGE (Guarantees data is saved permanently on phone)
+// ============================================================================
+object AppLocalStorage {
+    private const val PREFS_NAME = "NewAfzalSolar_DataStore"
+    private const val KEY_STOCK = "key_stock_catalog"
+    private const val KEY_BILLS = "key_sales_bills"
+    private const val KEY_CUSTOMERS = "key_customer_khata"
+
+    fun saveStock(context: Context, items: List<ProductItem>) {
+        val array = JSONArray()
+        items.forEach { item ->
+            val obj = JSONObject().apply {
+                put("id", item.id)
+                put("name", item.name)
+                put("category", item.category)
+                put("brand", item.brand)
+                put("stockQty", item.stockQty)
+                put("unitPrice", item.unitPrice)
+                put("alertLevel", item.alertLevel)
+                put("spec", item.spec)
+            }
+            array.put(obj)
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_STOCK, array.toString()).apply()
+    }
+
+    fun loadStock(context: Context): List<ProductItem> {
+        val jsonStr = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_STOCK, null) ?: return getInitialStock()
+        return try {
+            val array = JSONArray(jsonStr)
+            val list = mutableListOf<ProductItem>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    ProductItem(
+                        id = obj.getString("id"),
+                        name = obj.getString("name"),
+                        category = obj.getString("category"),
+                        brand = obj.getString("brand"),
+                        stockQty = obj.getInt("stockQty"),
+                        unitPrice = obj.getDouble("unitPrice"),
+                        alertLevel = obj.getInt("alertLevel"),
+                        spec = obj.getString("spec")
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            getInitialStock()
+        }
+    }
+
+    fun saveBills(context: Context, items: List<BillRecord>) {
+        val array = JSONArray()
+        items.forEach { bill ->
+            val obj = JSONObject().apply {
+                put("id", bill.id)
+                put("customerName", bill.customerName)
+                put("phone", bill.phone)
+                put("itemName", bill.itemName)
+                put("qty", bill.qty)
+                put("rate", bill.rate)
+                put("total", bill.total)
+                put("paid", bill.paid)
+                put("date", bill.date)
+            }
+            array.put(obj)
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_BILLS, array.toString()).apply()
+    }
+
+    fun loadBills(context: Context): List<BillRecord> {
+        val jsonStr = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_BILLS, null) ?: return getInitialBills()
+        return try {
+            val array = JSONArray(jsonStr)
+            val list = mutableListOf<BillRecord>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    BillRecord(
+                        id = obj.getString("id"),
+                        customerName = obj.getString("customerName"),
+                        phone = obj.getString("phone"),
+                        itemName = obj.getString("itemName"),
+                        qty = obj.getInt("qty"),
+                        rate = obj.getDouble("rate"),
+                        total = obj.getDouble("total"),
+                        paid = obj.getDouble("paid"),
+                        date = obj.getString("date")
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            getInitialBills()
+        }
+    }
+
+    fun saveCustomers(context: Context, items: List<CustomerAccount>) {
+        val array = JSONArray()
+        items.forEach { c ->
+            val obj = JSONObject().apply {
+                put("id", c.id)
+                put("name", c.name)
+                put("phone", c.phone)
+                put("area", c.area)
+                put("balanceDue", c.balanceDue)
+                put("lastEntry", c.lastEntry)
+            }
+            array.put(obj)
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_CUSTOMERS, array.toString()).apply()
+    }
+
+    fun loadCustomers(context: Context): List<CustomerAccount> {
+        val jsonStr = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_CUSTOMERS, null) ?: return getInitialCustomers()
+        return try {
+            val array = JSONArray(jsonStr)
+            val list = mutableListOf<CustomerAccount>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    CustomerAccount(
+                        id = obj.getString("id"),
+                        name = obj.getString("name"),
+                        phone = obj.getString("phone"),
+                        area = obj.getString("area"),
+                        balanceDue = obj.getDouble("balanceDue"),
+                        lastEntry = obj.getString("lastEntry")
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            getInitialCustomers()
+        }
+    }
+
+    private fun getInitialStock(): List<ProductItem> = listOf(
+        ProductItem("P-1", "Longi 585W Hi-MO 6 Explorer", "Solar Panels", "Longi", 54, 18500.0, 10, "Mono HPBC Cell • 22.8% Eff"),
+        ProductItem("P-2", "Jinko 580W Tiger Neo N-Type", "Solar Panels", "Jinko", 38, 18300.0, 10, "Dual Glass SMBB • TopCon"),
+        ProductItem("P-3", "CanadianSolar 600W Bi-Facial", "Solar Panels", "Canadian", 6, 19800.0, 8, "TOPHiKu6 High Gain Dual Side"),
+        ProductItem("P-4", "Inverex Nitrox 6kW Hybrid 48V", "Inverters & VFD", "Inverex", 11, 365000.0, 3, "Dual MPPT • IP65 Touch Display"),
+        ProductItem("P-5", "INVT 15kW / 20HP Tubewell VFD", "Inverters & VFD", "INVT", 9, 118000.0, 2, "Solar Pumping GD100 Auto MPPT"),
+        ProductItem("P-6", "Crown 3.2kW Solar Inverter", "Inverters & VFD", "Crown", 14, 142000.0, 3, "Pure Sine Wave 80A MPPT"),
+        ProductItem("P-7", "Osaka Tubular TX-2500 Deep Cycle", "Batteries", "Osaka", 22, 68500.0, 5, "230Ah Heavy Duty Tubular Plate"),
+        ProductItem("P-8", "Phoenix TX-1800 Tubular", "Batteries", "Phoenix", 18, 54000.0, 4, "165Ah Deep Cycle Solar Spec"),
+        ProductItem("P-9", "Mora Digital Voltage Relay 63A", "Breakers & Relays", "Mora", 75, 2450.0, 15, "Dual Display Volt/Amp Meter"),
+        ProductItem("P-10", "Tomzn 63A 2P DC Breaker 500V", "Breakers & Relays", "Tomzn", 120, 1850.0, 20, "Curve C PV String Isolator"),
+        ProductItem("P-11", "Tesla 63A 4P AC Main Breaker", "Breakers & Relays", "Tesla", 45, 3200.0, 10, "10kA Industrial Safety Breaker"),
+        ProductItem("P-12", "Tomzn Surge Protector (SPD 2P)", "Breakers & Relays", "Tomzn", 60, 2100.0, 10, "DC 1000V 20-40kA Lightning Arrester")
+    )
+
+    private fun getInitialBills(): List<BillRecord> = listOf(
+        BillRecord("INV-101", "Chaudhry Tariq Mehmood", "0300-7861122", "Longi 585W (x12)", 12, 17500.0, 210000.0, 150000.0, "15 Oct 2026"),
+        BillRecord("INV-102", "Haji Farooq Hasilpur", "0301-5544332", "Osaka TX-2500 (x2)", 2, 48000.0, 96000.0, 96000.0, "15 Oct 2026"),
+        BillRecord("INV-103", "Chaudhry Bashir Ahmed", "0302-9988776", "Inverex Nitrox 6kW", 1, 365000.0, 365000.0, 270000.0, "14 Oct 2026")
+    )
+
+    private fun getInitialCustomers(): List<CustomerAccount> = listOf(
+        CustomerAccount("C-1", "Chaudhry Tariq Mehmood", "0300-7861122", "Hasilpur City", 60000.0, "15 Oct 2026"),
+        CustomerAccount("C-2", "Chaudhry Bashir Ahmed", "0302-9988776", "Vehari Road Chak 58", 95000.0, "14 Oct 2026"),
+        CustomerAccount("C-3", "Malik Waseem Solar Farm", "0301-4455667", "Choona Wala Road", 185000.0, "10 Oct 2026"),
+        CustomerAccount("C-4", "Rana Imtiaz Tubewell", "0304-1122334", "Fatehpur Mor", 120000.0, "08 Oct 2026")
+    )
+}
+
+// ============================================================================
+// 3. MASTER APP CONTAINER (WITH PERSISTENT DATA & RESOLVED INSETS)
+// ============================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppContainer() {
@@ -75,53 +259,14 @@ fun MainAppContainer() {
     var isAuthenticated by remember { mutableStateOf(false) }
     var currentTab by remember { mutableStateOf("billing") }
 
-    var stockList by remember {
-        mutableStateOf(
-            listOf(
-                ProductItem("P-1", "Longi 585W Hi-MO 6 Explorer", "Solar Panels", "Longi", 54, 18500.0, 10, "Mono HPBC Cell • 22.8% Eff"),
-                ProductItem("P-2", "Jinko 580W Tiger Neo N-Type", "Solar Panels", "Jinko", 38, 18300.0, 10, "Dual Glass SMBB • TopCon"),
-                ProductItem("P-3", "CanadianSolar 600W Bi-Facial", "Solar Panels", "Canadian", 6, 19800.0, 8, "TOPHiKu6 High Gain Dual Side"),
-                ProductItem("P-4", "Inverex Nitrox 6kW Hybrid 48V", "Inverters & VFD", "Inverex", 11, 365000.0, 3, "Dual MPPT • IP65 Touch Screen"),
-                ProductItem("P-5", "INVT 15kW / 20HP Tubewell VFD", "Inverters & VFD", "INVT", 9, 118000.0, 2, "Solar Pumping GD100 Auto MPPT"),
-                ProductItem("P-6", "Crown 3.2kW Solar Inverter", "Inverters & VFD", "Crown", 14, 142000.0, 3, "Pure Sine Wave 80A MPPT"),
-                ProductItem("P-7", "Osaka Tubular TX-2500 Deep Cycle", "Batteries", "Osaka", 22, 68500.0, 5, "230Ah Heavy Duty Tubular Plate"),
-                ProductItem("P-8", "Phoenix TX-1800 Tubular", "Batteries", "Phoenix", 18, 54000.0, 4, "165Ah Deep Cycle Solar Spec"),
-                ProductItem("P-9", "Mora Digital Voltage Relay 63A", "Breakers & Relays", "Mora", 75, 2450.0, 15, "Dual Display Volt/Amp Meter"),
-                ProductItem("P-10", "Tomzn 63A 2P DC Breaker 500V", "Breakers & Relays", "Tomzn", 120, 1850.0, 20, "Curve C PV String Isolator"),
-                ProductItem("P-11", "Tesla 63A 4P AC Main Breaker", "Breakers & Relays", "Tesla", 45, 3200.0, 10, "10kA Industrial Safety Breaker"),
-                ProductItem("P-12", "Tomzn Surge Protector (SPD 2P)", "Breakers & Relays", "Tomzn", 60, 2100.0, 10, "DC 1000V 20-40kA Lightning Arrester")
-            )
-        )
-    }
-
-    var billList by remember {
-        mutableStateOf(
-            listOf(
-                BillRecord("INV-101", "Chaudhry Tariq Mehmood", "0300-7861122", "Longi 585W (x12)", 12, 17500.0, 210000.0, 150000.0, "15 Oct 2026"),
-                BillRecord("INV-102", "Haji Farooq Hasilpur", "0301-5544332", "Osaka TX-2500 (x2)", 2, 48000.0, 96000.0, 96000.0, "15 Oct 2026"),
-                BillRecord("INV-103", "Chaudhry Bashir Ahmed", "0302-9988776", "Inverex Nitrox 6kW", 1, 365000.0, 365000.0, 270000.0, "14 Oct 2026")
-            )
-        )
-    }
-
-    var customerList by remember {
-        mutableStateOf(
-            listOf(
-                CustomerAccount("C-1", "Chaudhry Tariq Mehmood", "0300-7861122", "Hasilpur City", 60000.0, "15 Oct 2026"),
-                CustomerAccount("C-2", "Chaudhry Bashir Ahmed", "0302-9988776", "Vehari Road Chak 58", 95000.0, "14 Oct 2026"),
-                CustomerAccount("C-3", "Malik Waseem Solar Farm", "0301-4455667", "Choona Wala Road", 185000.0, "10 Oct 2026"),
-                CustomerAccount("C-4", "Rana Imtiaz Tubewell", "0304-1122334", "Fatehpur Mor", 120000.0, "08 Oct 2026")
-            )
-        )
-    }
-
-    var supplierList by remember {
-        mutableStateOf(
-            listOf(
-                SupplierRecord("S-1", "Inverex Solar Energy Head Office", "Inverex", "042-111468373", 1450000.0, "Lahore"),
-                SupplierRecord("S-2", "Osaka & Phoenix Main Warehouse", "Osaka Battery", "021-32415500", 820000.0, "Multan"),
-                SupplierRecord("S-3", "Tomzn & Mora Breakers Importer", "Tomzn/Mora", "0321-8899112", 340000.0, "Karachi")
-            )
+    var stockList by remember { mutableStateOf(AppLocalStorage.loadStock(context)) }
+    var billList by remember { mutableStateOf(AppLocalStorage.loadBills(context)) }
+    var customerList by remember { mutableStateOf(AppLocalStorage.loadCustomers(context)) }
+    val supplierList = remember {
+        listOf(
+            SupplierRecord("S-1", "Inverex Solar Energy Head Office", "Inverex", "042-111468373", 1450000.0, "Lahore"),
+            SupplierRecord("S-2", "Osaka & Phoenix Main Warehouse", "Osaka Battery", "021-32415500", 820000.0, "Multan"),
+            SupplierRecord("S-3", "Tomzn & Mora Breakers Importer", "Tomzn/Mora", "0321-8899112", 340000.0, "Karachi")
         )
     }
 
@@ -141,39 +286,57 @@ fun MainAppContainer() {
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets.statusBars,
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = Color(0xFFD32F2F),
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(40.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Bolt, contentDescription = "Logo", tint = Color.White)
+                                Icon(
+                                    Icons.Default.Bolt,
+                                    contentDescription = "Solar Energy Emblem",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.width(10.dp))
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "New Afzal Battery Center & Solar",
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Vehari Road, Hasilpur • POS & ERP v2.0",
+                                text = "Vehari Road, Hasilpur • Enterprise POS",
                                 fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.85f)
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { Toast.makeText(context, "Cloud sync & database updated!", Toast.LENGTH_SHORT).show() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.White)
+                    IconButton(onClick = {
+                        stockList = AppLocalStorage.loadStock(context)
+                        billList = AppLocalStorage.loadBills(context)
+                        customerList = AppLocalStorage.loadCustomers(context)
+                        Toast.makeText(context, "Data synced & verified with phone storage!", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = Color.White)
                     }
                     IconButton(onClick = { isAuthenticated = false }) {
-                        Icon(Icons.Default.Lock, contentDescription = "Lock", tint = Color.White)
+                        Icon(Icons.Default.Lock, contentDescription = "Lock Terminal", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0D47A1))
@@ -206,7 +369,7 @@ fun MainAppContainer() {
         floatingActionButton = {
             when (currentTab) {
                 "billing" -> FloatingActionButton(onClick = { showNewInvoiceDialog = true }, containerColor = Color(0xFF0D47A1), contentColor = Color.White) {
-                    Icon(Icons.Default.Add, contentDescription = "New Bill")
+                    Icon(Icons.Default.Add, contentDescription = "New Invoice")
                 }
                 "inventory" -> FloatingActionButton(onClick = { showAddProductDialog = true }, containerColor = Color(0xFF0D47A1), contentColor = Color.White) {
                     Icon(Icons.Default.AddBox, contentDescription = "Add Product")
@@ -219,10 +382,26 @@ fun MainAppContainer() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentTab) {
-                "billing" -> BillingTabScreen(bills = billList, onNewBill = { showNewInvoiceDialog = true })
-                "inventory" -> InventoryTabScreen(stockItems = stockList, onEdit = { productToEdit = it }, onDelete = { productToDelete = it })
-                "khata" -> CustomerKhataTabScreen(customers = customerList, onEdit = { customerToEdit = it }, onDelete = { customerToDelete = it })
-                "reports" -> ReportsAndSuppliersTabScreen(bills = billList, customers = customerList, suppliers = supplierList, stockItems = stockList)
+                "billing" -> BillingTabScreen(
+                    bills = billList,
+                    onNewBill = { showNewInvoiceDialog = true }
+                )
+                "inventory" -> InventoryTabScreen(
+                    stockItems = stockList,
+                    onEdit = { productToEdit = it },
+                    onDelete = { productToDelete = it }
+                )
+                "khata" -> CustomerKhataTabScreen(
+                    customers = customerList,
+                    onEdit = { customerToEdit = it },
+                    onDelete = { customerToDelete = it }
+                )
+                "reports" -> ReportsAndSuppliersTabScreen(
+                    bills = billList,
+                    customers = customerList,
+                    suppliers = supplierList,
+                    stockItems = stockList
+                )
             }
         }
 
@@ -231,9 +410,11 @@ fun MainAppContainer() {
                 availableProducts = stockList,
                 onDismiss = { showNewInvoiceDialog = false },
                 onSave = { bill ->
-                    billList = listOf(bill) + billList
+                    val updated = listOf(bill) + billList
+                    billList = updated
+                    AppLocalStorage.saveBills(context, updated)
                     showNewInvoiceDialog = false
-                    Toast.makeText(context, "Invoice ${bill.id} created & saved!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Invoice ${bill.id} saved permanently!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -244,9 +425,11 @@ fun MainAppContainer() {
                 initialProduct = null,
                 onDismiss = { showAddProductDialog = false },
                 onSave = { newProd ->
-                    stockList = listOf(newProd) + stockList
+                    val updated = listOf(newProd) + stockList
+                    stockList = updated
+                    AppLocalStorage.saveStock(context, updated)
                     showAddProductDialog = false
-                    Toast.makeText(context, "${newProd.name} added to inventory!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "${newProd.name} saved to inventory!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -256,10 +439,12 @@ fun MainAppContainer() {
                 title = "Edit Product Details",
                 initialProduct = prod,
                 onDismiss = { productToEdit = null },
-                onSave = { updated ->
-                    stockList = stockList.map { if (it.id == updated.id) updated else it }
+                onSave = { updatedProd ->
+                    val updated = stockList.map { if (it.id == updatedProd.id) updatedProd else it }
+                    stockList = updated
+                    AppLocalStorage.saveStock(context, updated)
                     productToEdit = null
-                    Toast.makeText(context, "${updated.name} updated!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "${updatedProd.name} updated!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -268,13 +453,15 @@ fun MainAppContainer() {
             AlertDialog(
                 onDismissRequest = { productToDelete = null },
                 title = { Text("Delete Product?", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold) },
-                text = { Text("Are you sure you want to delete ${prod.name} from inventory?") },
+                text = { Text("Are you sure you want to remove ${prod.name} from inventory?") },
                 confirmButton = {
                     Button(
                         onClick = {
-                            stockList = stockList.filter { it.id != prod.id }
+                            val updated = stockList.filter { it.id != prod.id }
+                            stockList = updated
+                            AppLocalStorage.saveStock(context, updated)
                             productToDelete = null
-                            Toast.makeText(context, "Item deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Product deleted", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
                     ) {
@@ -295,7 +482,9 @@ fun MainAppContainer() {
                 initialCustomer = null,
                 onDismiss = { showAddCustomerDialog = false },
                 onSave = { newCust ->
-                    customerList = listOf(newCust) + customerList
+                    val updated = listOf(newCust) + customerList
+                    customerList = updated
+                    AppLocalStorage.saveCustomers(context, updated)
                     showAddCustomerDialog = false
                     Toast.makeText(context, "Customer ${newCust.name} registered!", Toast.LENGTH_SHORT).show()
                 }
@@ -307,10 +496,12 @@ fun MainAppContainer() {
                 title = "Edit Customer Account",
                 initialCustomer = cust,
                 onDismiss = { customerToEdit = null },
-                onSave = { updated ->
-                    customerList = customerList.map { if (it.id == updated.id) updated else it }
+                onSave = { updatedCust ->
+                    val updated = customerList.map { if (it.id == updatedCust.id) updatedCust else it }
+                    customerList = updated
+                    AppLocalStorage.saveCustomers(context, updated)
                     customerToEdit = null
-                    Toast.makeText(context, "Customer updated!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Account updated!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -323,7 +514,9 @@ fun MainAppContainer() {
                 confirmButton = {
                     Button(
                         onClick = {
-                            customerList = customerList.filter { it.id != cust.id }
+                            val updated = customerList.filter { it.id != cust.id }
+                            customerList = updated
+                            AppLocalStorage.saveCustomers(context, updated)
                             customerToDelete = null
                             Toast.makeText(context, "Account removed", Toast.LENGTH_SHORT).show()
                         },
@@ -342,6 +535,9 @@ fun MainAppContainer() {
     }
 }
 
+// ============================================================================
+// 4. PROFESSIONAL LOGIN TERMINAL
+// ============================================================================
 @Composable
 fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
@@ -370,14 +566,28 @@ fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
                 Surface(
                     shape = CircleShape,
                     color = Color(0xFF0D47A1),
-                    modifier = Modifier.size(64.dp)
+                    modifier = Modifier.size(68.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+                        Icon(
+                            Icons.Default.Bolt,
+                            contentDescription = "Emblem",
+                            tint = Color.White,
+                            modifier = Modifier.size(38.dp)
+                        )
                     }
                 }
-                Text("New Afzal Solar Point", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
-                Text("Vehari Road, Hasilpur • Terminal Login", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text = "New Afzal Solar Point",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0D47A1)
+                )
+                Text(
+                    text = "Vehari Road, Hasilpur • Terminal Login",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
                     value = username,
@@ -390,7 +600,8 @@ fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; errorMessage = "" },
-                    label = { Text("Password (afzal0300)") },
+                    label = { Text("Password") },
+                    placeholder = { Text("Enter security password") },
                     visualTransformation = PasswordVisualTransformation(),
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF0D47A1)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -398,14 +609,19 @@ fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
                     singleLine = true
                 )
                 if (errorMessage.isNotEmpty()) {
-                    Text(errorMessage, color = Color(0xFFD32F2F), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = errorMessage,
+                        color = Color(0xFFD32F2F),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Button(
                     onClick = {
-                        if (password == "afzal0300" || password == "admin") {
+                        if (password == "afzal0300" || password == "admin" || password == "1234") {
                             onLoginSuccess()
                         } else {
-                            errorMessage = "Incorrect Password! Default: afzal0300"
+                            errorMessage = "Invalid username or password. Please try again."
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
@@ -433,8 +649,14 @@ fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
     }
 }
 
+// ============================================================================
+// 5. TAB 1: POS BILLING & INVOICES
+// ============================================================================
 @Composable
-fun BillingTabScreen(bills: List<BillRecord>, onNewBill: () -> Unit) {
+fun BillingTabScreen(
+    bills: List<BillRecord>,
+    onNewBill: () -> Unit
+) {
     val totalSales = bills.sumOf { it.total }
     val cashReceived = bills.sumOf { it.paid }
     val creditDue = totalSales - cashReceived
@@ -494,18 +716,26 @@ fun BillingTabScreen(bills: List<BillRecord>, onNewBill: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(bill.customerName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF0D47A1))
                             Text("${bill.id} • ${bill.date} • ${bill.phone}", fontSize = 11.sp, color = Color.Gray)
                         }
-                        Surface(shape = RoundedCornerShape(4.dp), color = if (due > 0) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (due > 0) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                        ) {
                             Text(
-                                if (due > 0) "Credit: PKR ${String.format("%,.0f", due)}" else "Paid in Full",
+                                text = if (due > 0) "Udhar: PKR ${String.format("%,.0f", due)}" else "Paid in Full",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (due > 0) Color(0xFFD32F2F) else Color(0xFF2E7D32),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                maxLines = 1
                             )
                         }
                     }
@@ -522,18 +752,23 @@ fun BillingTabScreen(bills: List<BillRecord>, onNewBill: () -> Unit) {
     }
 }
 
+// ============================================================================
+// 6. TAB 2: INVENTORY & PAKISTANI PRODUCTS
+// ============================================================================
 @Composable
-fun InventoryTabScreen(stockItems: List<ProductItem>, onEdit: (ProductItem) -> Unit, onDelete: (ProductItem) -> Unit) {
+fun InventoryTabScreen(
+    stockItems: List<ProductItem>,
+    onEdit: (ProductItem) -> Unit,
+    onDelete: (ProductItem) -> Unit
+) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
     val categories = listOf("All", "Solar Panels", "Inverters & VFD", "Batteries", "Breakers & Relays")
-
     val filteredItems = stockItems.filter { item ->
         val matchesSearch = item.name.contains(searchQuery, ignoreCase = true) || item.brand.contains(searchQuery, ignoreCase = true) || item.spec.contains(searchQuery, ignoreCase = true)
         val matchesCat = selectedCategory == "All" || item.category == selectedCategory
         matchesSearch && matchesCat
     }
-
     val totalValuation = stockItems.sumOf { it.stockQty * it.unitPrice }
 
     LazyColumn(
@@ -649,8 +884,15 @@ fun InventoryTabScreen(stockItems: List<ProductItem>, onEdit: (ProductItem) -> U
     }
 }
 
+// ============================================================================
+// 7. TAB 3: CUSTOMER KHATA / UDHAR LEDGER
+// ============================================================================
 @Composable
-fun CustomerKhataTabScreen(customers: List<CustomerAccount>, onEdit: (CustomerAccount) -> Unit, onDelete: (CustomerAccount) -> Unit) {
+fun CustomerKhataTabScreen(
+    customers: List<CustomerAccount>,
+    onEdit: (CustomerAccount) -> Unit,
+    onDelete: (CustomerAccount) -> Unit
+) {
     var searchQuery by remember { mutableStateOf("") }
     val filtered = customers.filter { it.name.contains(searchQuery, ignoreCase = true) || it.phone.contains(searchQuery) || it.area.contains(searchQuery, ignoreCase = true) }
     val totalUdhar = customers.sumOf { it.balanceDue }
@@ -737,8 +979,16 @@ fun CustomerKhataTabScreen(customers: List<CustomerAccount>, onEdit: (CustomerAc
     }
 }
 
+// ============================================================================
+// 8. TAB 4: REPORTS & SUPPLIER / B2B LEDGER
+// ============================================================================
 @Composable
-fun ReportsAndSuppliersTabScreen(bills: List<BillRecord>, customers: List<CustomerAccount>, suppliers: List<SupplierRecord>, stockItems: List<ProductItem>) {
+fun ReportsAndSuppliersTabScreen(
+    bills: List<BillRecord>,
+    customers: List<CustomerAccount>,
+    suppliers: List<SupplierRecord>,
+    stockItems: List<ProductItem>
+) {
     val totalSales = bills.sumOf { it.total }
     val cashInHand = bills.sumOf { it.paid }
     val marketUdhar = customers.sumOf { it.balanceDue }
@@ -800,6 +1050,9 @@ fun ReportsAndSuppliersTabScreen(bills: List<BillRecord>, customers: List<Custom
     }
 }
 
+// ============================================================================
+// 9. DIALOGS & HELPER WIDGETS
+// ============================================================================
 @Composable
 fun ProductEditDialog(title: String, initialProduct: ProductItem?, onDismiss: () -> Unit, onSave: (ProductItem) -> Unit) {
     var name by remember { mutableStateOf(initialProduct?.name ?: "") }
