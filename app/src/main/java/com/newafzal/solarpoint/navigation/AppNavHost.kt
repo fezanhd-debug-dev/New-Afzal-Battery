@@ -1,9 +1,7 @@
 package com.newafzal.solarpoint.navigation
 
 import android.widget.Toast
-import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,29 +17,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.fragment.app.FragmentActivity
-import androidx.navigation.compose.*
-import java.util.concurrent.Executor
-import androidx.core.content.ContextCompat
 
-// ----------------------------------------------------
 // Data Models
-// ----------------------------------------------------
 data class ProductItem(
     val id: String,
     val name: String,
-    val category: String, // Solar Panels, Inverters & VFD, Batteries, Breakers & Relays, DC Accessories
-    val brand: String, // Longi, Jinko, Inverex, Tomzn, Tesla, Mora, INVT, Osaka
+    val category: String,
+    val brand: String,
     val stockQty: Int,
     val unitPrice: Double,
     val alertLevel: Int,
@@ -66,22 +56,21 @@ fun MainAppContainer() {
     val context = LocalContext.current
     var isAuthenticated by remember { mutableStateOf(false) }
 
-    // Initial Pakistani Market Stock Data
     var stockList by remember {
         mutableStateOf(
             listOf(
-                ProductItem("P-1", "Longi 585W Hi-MO 6 Explorer", "Solar Panels", "Longi", 54, 18500.0, 10, "Mono HPBC Cell • 22.8% Eff"),
-                ProductItem("P-2", "Jinko 580W Tiger Neo N-Type", "Solar Panels", "Jinko", 38, 18300.0, 10, "Dual Glass SMBB • TopCon"),
-                ProductItem("P-3", "CanadianSolar 600W Bi-Facial", "Solar Panels", "Canadian", 6, 19800.0, 8, "TOPHiKu6 High Gain 30Yr Warranty"),
-                ProductItem("P-4", "Inverex Nitrox 6kW Hybrid 48V", "Inverters & VFD", "Inverex", 11, 365000.0, 3, "Dual MPPT • IP65 Waterproof Touch Screen"),
-                ProductItem("P-5", "INVT 15kW / 20HP Tubewell VFD", "Inverters & VFD", "INVT", 9, 118000.0, 2, "Solar Pumping GD100 Auto MPPT"),
-                ProductItem("P-6", "Crown 3.2kW Solar Inverter", "Inverters & VFD", "Crown", 14, 142000.0, 3, "Pure Sine Wave 80A MPPT"),
-                ProductItem("P-7", "Osaka Tubular TX-2500 Deep Cycle", "Batteries", "Osaka", 22, 68500.0, 5, "230Ah Heavy Duty Tubular Plate"),
-                ProductItem("P-8", "Phoenix TX-1800 Tubular", "Batteries", "Phoenix", 18, 54000.0, 4, "165Ah Deep Cycle Solar Spec"),
-                ProductItem("P-9", "Mora Digital Under/Over Voltage Relay 63A", "Breakers & Relays", "Mora", 75, 2450.0, 15, "Dual Display Voltage/Current Auto Recovery"),
-                ProductItem("P-10", "Tomzn 63A 2P DC Breaker 500V", "Breakers & Relays", "Tomzn", 120, 1850.0, 20, "Curve C PV String Isolator"),
-                ProductItem("P-11", "Tesla 63A 4P AC Main Breaker", "Breakers & Relays", "Tesla", 45, 3200.0, 10, "10kA Industrial AC Safety Breaker"),
-                ProductItem("P-12", "Tomzn Surge Protective Device (SPD 2P)", "Breakers & Relays", "Tomzn", 60, 2100.0, 10, "DC 1000V 20-40kA Lightning Arrester")
+                ProductItem("P-1", "Longi 585W Hi-MO 6 Explorer", "Solar Panels", "Longi", 54, 18500.0, 10, "Mono HPBC Cell • 22.8% Eff • MC4 EV02"),
+                ProductItem("P-2", "Jinko 580W Tiger Neo N-Type", "Solar Panels", "Jinko", 38, 18300.0, 10, "Dual Glass SMBB • TopCon 30Yr Warranty"),
+                ProductItem("P-3", "CanadianSolar 600W Bi-Facial", "Solar Panels", "Canadian", 6, 19800.0, 8, "TOPHiKu6 High Gain Dual Side Backside"),
+                ProductItem("P-4", "Inverex Nitrox 6kW Hybrid 48V", "Inverters & VFD", "Inverex", 11, 365000.0, 3, "Dual MPPT • IP65 Touch LCD Color Display"),
+                ProductItem("P-5", "INVT 15kW / 20HP Tubewell VFD", "Inverters & VFD", "INVT", 9, 118000.0, 2, "Solar Pumping GD100 Auto MPPT Hasilpur"),
+                ProductItem("P-6", "Crown 3.2kW Solar Inverter", "Inverters & VFD", "Crown", 14, 142000.0, 3, "Pure Sine Wave 80A MPPT Hybrid"),
+                ProductItem("P-7", "Osaka Tubular TX-2500 Deep Cycle", "Batteries", "Osaka", 22, 68500.0, 5, "230Ah Heavy Duty Tubular Plate Battery"),
+                ProductItem("P-8", "Phoenix TX-1800 Tubular", "Batteries", "Phoenix", 18, 54000.0, 4, "165Ah Deep Cycle Solar Heavy Duty"),
+                ProductItem("P-9", "Mora Digital Under/Over Voltage Relay 63A", "Breakers & Relays", "Mora", 75, 2450.0, 15, "Dual Display Volt/Amp Meter • Auto Recovery Timer"),
+                ProductItem("P-10", "Tomzn 63A 2P DC Breaker 500V", "Breakers & Relays", "Tomzn", 120, 1850.0, 20, "Curve C PV String Isolator Solar Certified"),
+                ProductItem("P-11", "Tesla 63A 4P AC Main Breaker", "Breakers & Relays", "Tesla", 45, 3200.0, 10, "10kA Industrial Safety AC Main Breaker"),
+                ProductItem("P-12", "Tomzn Surge Protective Device (SPD 2P)", "Breakers & Relays", "Tomzn", 60, 2100.0, 10, "DC 1000V 20-40kA Lightning Surge Arrester")
             )
         )
     }
@@ -95,20 +84,13 @@ fun MainAppContainer() {
         )
     }
 
-    // Refresh simulation trigger
-    var isRefreshing by remember { mutableStateOf(false) }
-
-    // Modals
     var showAddProductDialog by remember { mutableStateOf(false) }
     var productToEdit by remember { mutableStateOf<ProductItem?>(null) }
     var productToDelete by remember { mutableStateOf<ProductItem?>(null) }
     var showNewInvoiceDialog by remember { mutableStateOf(false) }
 
-    // If not authenticated, show professional Login Screen
     if (!isAuthenticated) {
-        LoginScreen(
-            onLoginSuccess = { isAuthenticated = true }
-        )
+        LoginTerminalScreen(onLoginSuccess = { isAuthenticated = true })
         return
     }
 
@@ -143,15 +125,9 @@ fun MainAppContainer() {
                     }
                 },
                 actions = {
-                    // Refresh Button
-                    IconButton(onClick = {
-                        isRefreshing = true
-                        Toast.makeText(context, "Refreshing stock & cloud records...", Toast.LENGTH_SHORT).show()
-                        isRefreshing = false
-                    }) {
+                    IconButton(onClick = { Toast.makeText(context, "Refreshing stock & cloud records...", Toast.LENGTH_SHORT).show() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.White)
                     }
-                    // Logout / Lock Button
                     IconButton(onClick = { isAuthenticated = false }) {
                         Icon(Icons.Default.Lock, contentDescription = "Lock", tint = Color.White)
                     }
@@ -178,7 +154,6 @@ fun MainAppContainer() {
             onDeleteProduct = { productToDelete = it }
         )
 
-        // Dialogs for CRUD
         if (showAddProductDialog) {
             ProductEditDialog(
                 title = "Add New Solar Product / Breaker",
@@ -187,7 +162,7 @@ fun MainAppContainer() {
                 onSave = { newProd ->
                     stockList = listOf(newProd) + stockList
                     showAddProductDialog = false
-                    Toast.makeText(context, "${newProd.name} added to stock!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "${newProd.name} added to inventory!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -209,7 +184,7 @@ fun MainAppContainer() {
             AlertDialog(
                 onDismissRequest = { productToDelete = null },
                 title = { Text("Delete Product?", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold) },
-                text = { Text("Are you sure you want to permanently remove ${prod.name} from inventory?") },
+                text = { Text("Are you sure you want to delete ${prod.name} from inventory?") },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -244,11 +219,8 @@ fun MainAppContainer() {
     }
 }
 
-// ====================================================
-// 1. SECURE LOGIN SCREEN WITH FINGERPRINT & afzal0300
-// ====================================================
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
     var username by remember { mutableStateOf("afzal") }
     var password by remember { mutableStateOf("") }
@@ -281,21 +253,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
                     }
                 }
-
-                Text(
-                    text = "New Afzal Solar Point",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0D47A1)
-                )
-                Text(
-                    text = "Vehari Road, Hasilpur • Terminal Login",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-
+                Text("New Afzal Solar Point", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
+                Text("Vehari Road, Hasilpur • Terminal Login", fontSize = 12.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(4.dp))
-
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
@@ -304,7 +264,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; errorMessage = "" },
@@ -315,17 +274,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
                 if (errorMessage.isNotEmpty()) {
                     Text(errorMessage, color = Color(0xFFD32F2F), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
-
                 Button(
                     onClick = {
                         if (password == "afzal0300" || password == "admin") {
                             onLoginSuccess()
                         } else {
-                            errorMessage = "Incorrect Password! Default is: afzal0300"
+                            errorMessage = "Incorrect Password! Default: afzal0300"
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
@@ -334,10 +291,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 ) {
                     Text("Login to ERP System", fontWeight = FontWeight.Bold, color = Color.White)
                 }
-
                 Divider(color = Color(0xFFEFF3FF))
-
-                // Biometric Fingerprint Login Button
                 OutlinedButton(
                     onClick = {
                         Toast.makeText(context, "Fingerprint Verified: Afzal Admin", Toast.LENGTH_SHORT).show()
@@ -356,9 +310,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     }
 }
 
-// ====================================================
-// 2. ALL-IN-ONE DASHBOARD & COMPLETE INVENTORY
-// ====================================================
 @Composable
 fun AllInOneDashboard(
     modifier: Modifier = Modifier,
@@ -370,7 +321,6 @@ fun AllInOneDashboard(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
-
     val categories = listOf("All", "Solar Panels", "Inverters & VFD", "Batteries", "Breakers & Relays")
 
     val filteredItems = stockItems.filter { item ->
@@ -392,7 +342,6 @@ fun AllInOneDashboard(
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // KPI Overview Row
         item {
             Card(
                 shape = RoundedCornerShape(14.dp),
@@ -418,11 +367,9 @@ fun AllInOneDashboard(
                             Text("New Invoice +", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-
                     Spacer(modifier = Modifier.height(10.dp))
                     Divider(color = Color(0xFFEFF3FF))
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         KPIBox("Gross Sales", "PKR ${String.format("%,.0f", totalSales)}", Color(0xFF0D47A1))
                         KPIBox("Cash Inflow", "PKR ${String.format("%,.0f", cashReceived)}", Color(0xFF2E7D32))
@@ -432,7 +379,6 @@ fun AllInOneDashboard(
             }
         }
 
-        // Search Bar
         item {
             OutlinedTextField(
                 value = searchQuery,
@@ -447,16 +393,10 @@ fun AllInOneDashboard(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF0D47A1),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                )
+                shape = RoundedCornerShape(12.dp)
             )
         }
 
-        // Category Filter Chips
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(categories) { cat ->
@@ -490,52 +430,27 @@ fun AllInOneDashboard(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = Color(0xFFEFF3FF)
-                                ) {
-                                    Text(
-                                        prod.category,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0D47A1),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFEFF3FF)) {
+                                    Text(prod.category, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = if (isLowStock) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
-                                ) {
-                                    Text(
-                                        if (isLowStock) "⚠️ ${prod.stockQty} Left" else "• ${prod.stockQty} In Stock",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isLowStock) Color(0xFFD32F2F) else Color(0xFF2E7D32),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                Surface(shape = RoundedCornerShape(4.dp), color = if (isLowStock) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)) {
+                                    Text(if (isLowStock) "⚠️ ${prod.stockQty} Left" else "• ${prod.stockQty} In Stock", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (isLowStock) Color(0xFFD32F2F) else Color(0xFF2E7D32), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(prod.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1E293B))
                             Text(prod.spec, fontSize = 11.sp, color = Color.Gray)
                         }
-
                         Column(horizontalAlignment = Alignment.End) {
                             Text("Retail PKR", fontSize = 10.sp, color = Color.Gray)
                             Text("PKR ${String.format("%,.0f", prod.unitPrice)}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0D47A1))
                         }
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
                     Divider(color = Color(0xFFF1F5F9))
                     Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(
                             onClick = { onDeleteProduct(prod) },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
@@ -566,9 +481,6 @@ fun AllInOneDashboard(
     }
 }
 
-// ====================================================
-// 3. EDIT & ADD PRODUCT DIALOG
-// ====================================================
 @Composable
 fun ProductEditDialog(
     title: String,
@@ -582,49 +494,20 @@ fun ProductEditDialog(
     var qtyText by remember { mutableStateOf(initialProduct?.stockQty?.toString() ?: "10") }
     var priceText by remember { mutableStateOf(initialProduct?.unitPrice?.toInt()?.toString() ?: "1850") }
     var specText by remember { mutableStateOf(initialProduct?.spec ?: "63A 2P DC Breaker Curve C") }
-
     val categories = listOf("Solar Panels", "Inverters & VFD", "Batteries", "Breakers & Relays")
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth().padding(10.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = null)
                     }
                 }
                 Divider(color = Color(0xFFEFF3FF))
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Product Name & Model *") },
-                    placeholder = { Text("e.g. Tomzn 63A 2P DC Breaker") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = specText,
-                    onValueChange = { specText = it },
-                    label = { Text("Specification / Brand details") },
-                    placeholder = { Text("e.g. Tesla 63A 4P AC / Mora Relay") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Product Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = specText, onValueChange = { specText = it }, label = { Text("Specification / Brand") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Text("Category:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     categories.forEach { cat ->
@@ -635,51 +518,20 @@ fun ProductEditDialog(
                             modifier = Modifier.weight(1f).clickable { category = cat }
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 6.dp)) {
-                                Text(
-                                    cat.split(" ").first(),
-                                    fontSize = 10.sp,
-                                    color = if (isChosen) Color.White else Color.Black,
-                                    fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
-                                )
+                                Text(cat.split(" ").first(), fontSize = 10.sp, color = if (isChosen) Color.White else Color.Black, fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal)
                             }
                         }
                     }
                 }
-
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = qtyText,
-                        onValueChange = { qtyText = it },
-                        label = { Text("Stock Qty") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = priceText,
-                        onValueChange = { priceText = it },
-                        label = { Text("Rate (PKR)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1.3f),
-                        singleLine = true
-                    )
+                    OutlinedTextField(value = qtyText, onValueChange = { qtyText = it }, label = { Text("Stock Qty") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(value = priceText, onValueChange = { priceText = it }, label = { Text("Rate (PKR)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1.3f), singleLine = true)
                 }
-
                 Button(
                     onClick = {
                         val qty = qtyText.toIntOrNull() ?: 1
                         val price = priceText.toDoubleOrNull() ?: 0.0
-                        val item = ProductItem(
-                            id = initialProduct?.id ?: "P-${(100..999).random()}",
-                            name = name.ifBlank { "Solar Item" },
-                            category = category,
-                            brand = brand,
-                            stockQty = qty,
-                            unitPrice = price,
-                            alertLevel = 3,
-                            spec = specText
-                        )
-                        onSave(item)
+                        onSave(ProductItem(initialProduct?.id ?: "P-${(100..999).random()}", name.ifBlank { "Solar Item" }, category, brand, qty, price, 3, specText))
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
                     shape = RoundedCornerShape(8.dp),
@@ -692,9 +544,6 @@ fun ProductEditDialog(
     }
 }
 
-// ====================================================
-// 4. NEW INVOICE DIALOG
-// ====================================================
 @Composable
 fun NewInvoiceDialog(
     availableProducts: List<ProductItem>,
@@ -707,120 +556,37 @@ fun NewInvoiceDialog(
     var quantityText by remember { mutableStateOf("1") }
     var rateText by remember { mutableStateOf(selectedProduct?.unitPrice?.toInt()?.toString() ?: "1850") }
     var paidText by remember { mutableStateOf("") }
-
     val qty = quantityText.toIntOrNull() ?: 1
     val rate = rateText.toDoubleOrNull() ?: 0.0
     val total = qty * rate
     val paid = paidText.toDoubleOrNull() ?: total
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth().padding(10.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Generate Sales Invoice", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = null)
                     }
                 }
                 Divider(color = Color(0xFFEFF3FF))
-
-                OutlinedTextField(
-                    value = customerName,
-                    onValueChange = { customerName = it },
-                    label = { Text("Customer Name *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = customerPhone,
-                    onValueChange = { customerPhone = it },
-                    label = { Text("Phone Number") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Text("Select Product:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    availableProducts.take(4).forEach { p ->
-                        val isChosen = selectedProduct?.id == p.id
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (isChosen) Color(0xFFEFF3FF) else Color.Transparent,
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                selectedProduct = p
-                                rateText = p.unitPrice.toInt().toString()
-                            }
-                        ) {
-                            Row(modifier = Modifier.padding(6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(p.name, fontSize = 12.sp, fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal)
-                                Text("PKR ${p.unitPrice.toInt()}", fontSize = 12.sp, color = Color.Gray)
-                            }
-                        }
-                    }
-                }
-
+                OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = customerPhone, onValueChange = { customerPhone = it }, label = { Text("Phone Number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = quantityText,
-                        onValueChange = { quantityText = it },
-                        label = { Text("Qty") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = rateText,
-                        onValueChange = { rateText = it },
-                        label = { Text("Price (PKR)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1.3f),
-                        singleLine = true
-                    )
+                    OutlinedTextField(value = quantityText, onValueChange = { quantityText = it }, label = { Text("Qty") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(value = rateText, onValueChange = { rateText = it }, label = { Text("Rate (PKR)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1.3f), singleLine = true)
                 }
-
                 Surface(color = Color(0xFFEFF3FF), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total Bill:", fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
                         Text("PKR ${String.format("%,.0f", total)}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0D47A1))
                     }
                 }
-
-                OutlinedTextField(
-                    value = paidText,
-                    onValueChange = { paidText = it },
-                    label = { Text("Cash Received (Leave empty for full)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
+                OutlinedTextField(value = paidText, onValueChange = { paidText = it }, label = { Text("Cash Received") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Button(
                     onClick = {
-                        val record = BillRecord(
-                            id = "INV-${(100..999).random()}",
-                            customerName = customerName.ifBlank { "Walk-in Client" },
-                            phone = customerPhone.ifBlank { "0300-XXXXXXX" },
-                            itemName = "${selectedProduct?.name ?: "Solar"} (x$qty)",
-                            qty = qty,
-                            rate = rate,
-                            total = total,
-                            paid = paid,
-                            date = "15 Oct 2026"
-                        )
-                        onSave(record)
+                        onSave(BillRecord("INV-${(100..999).random()}", customerName.ifBlank { "Walk-in Client" }, customerPhone.ifBlank { "0300-XXXXXXX" }, "${selectedProduct?.name ?: "Solar"} (x$qty)", qty, rate, total, paid, "15 Oct 2026"))
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
                     shape = RoundedCornerShape(8.dp),
