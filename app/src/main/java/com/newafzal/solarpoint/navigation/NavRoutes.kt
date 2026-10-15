@@ -10,10 +10,10 @@ sealed class Screen(val route: String, val titleUrdu: String, val icon: ImageVec
     object Khata : Screen("khata", "کسٹمر کھاتہ", Icons.Default.MenuBook)
     object Reports : Screen("reports", "رپورٹس و منافع", Icons.Default.Assessment)
 
-    // Sub screens
-    object Roznamcha : Screen("roznamcha", "روزنامچہ کیش کلوزنگ")
-    object StaffLedger : Screen("staff_ledger", "ملازمین تنخواہ کھاتہ")
-    object SolarQuotation : Screen("solar_quotation", "سولر کوٹیشن ایسٹیمیٹ")
-    object WarrantyTracking : Screen("warranty_tracking", "وارنٹی کلیم ٹریکنگ")
-    object BackupRestore : Screen("backup_restore", "کلاؤڈ آٹو بیک اپ")
+    // Sub screens with default icon = null
+    object Roznamcha : Screen("roznamcha", "روزنامچہ کیش کلوزنگ", null)
+    object StaffLedger : Screen("staff_ledger", "ملازمین تنخواہ کھاتہ", null)
+    object SolarQuotation : Screen("solar_quotation", "سولر کوٹیشن ایسٹیمیٹ", null)
+    object WarrantyTracking : Screen("warranty_tracking", "وارنٹی کلیم ٹریکنگ", null)
+    object BackupRestore : Screen("backup_restore", "کلاؤڈ آٹو بیک اپ", null)
 }
