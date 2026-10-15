@@ -3,6 +3,7 @@ package com.newafzal.solarpoint.navigation
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,7 +20,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -37,8 +44,8 @@ import org.json.JSONObject
 data class ProductItem(
     val id: String,
     val name: String,
-    val category: String, // Solar Panels, Inverters & VFD, Batteries, Breakers & Relays
-    val brand: String, // Longi, Jinko, Inverex, Tomzn, Tesla, Mora, INVT, Osaka
+    val category: String,
+    val brand: String,
     val stockQty: Int,
     val unitPrice: Double,
     val alertLevel: Int,
@@ -55,7 +62,9 @@ data class BillRecord(
     val total: Double,
     val paid: Double,
     val date: String
-)
+) {
+    val dueAmount: Double get() = (total - paid).coerceAtLeast(0.0)
+}
 
 data class CustomerAccount(
     val id: String,
@@ -76,7 +85,112 @@ data class SupplierRecord(
 )
 
 // ============================================================================
-// 2. LOCAL PERSISTENT STORAGE (Guarantees data is saved permanently on phone)
+// 2. THE ORIGINAL SESSION-0 BRAND EMBLEM LOGO (RE-CREATED IN VECTOR CANVAS)
+// ============================================================================
+@Composable
+fun OriginalAfzalSolarLogo(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
+            .padding(2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            // 1. Sun & Golden Rays (Top Left Corner)
+            val sunCenter = Offset(w * 0.16f, h * 0.20f)
+            val sunR = w * 0.08f
+            drawCircle(
+                color = Color(0xFFFFA000),
+                radius = sunR,
+                center = sunCenter
+            )
+
+            // Rays
+            val rayOffsets = listOf(
+                Offset(0f, -sunR * 1.5f),
+                Offset(-sunR * 1.5f, 0f),
+                Offset(-sunR * 1.1f, -sunR * 1.1f),
+                Offset(sunR * 1.1f, -sunR * 1.1f)
+            )
+            rayOffsets.forEach { ray ->
+                drawLine(
+                    color = Color(0xFFFFA000),
+                    start = Offset(sunCenter.x + ray.x * 0.7f, sunCenter.y + ray.y * 0.7f),
+                    end = Offset(sunCenter.x + ray.x * 1.3f, sunCenter.y + ray.y * 1.3f),
+                    strokeWidth = 2f,
+                    cap = StrokeCap.Round
+                )
+            }
+
+            // 2. Battery Outer Frame
+            val bLeft = w * 0.12f
+            val bTop = h * 0.26f
+            val bWidth = w * 0.76f
+            val bHeight = h * 0.65f
+
+            // Blue outer border with rounded corners
+            drawRoundRect(
+                color = Color(0xFF0D47A1),
+                topLeft = Offset(bLeft, bTop),
+                size = Size(bWidth, bHeight),
+                cornerRadius = CornerRadius(6f, 6f),
+                style = Stroke(width = 3f)
+            )
+
+            // Right Battery Terminal
+            drawRoundRect(
+                color = Color(0xFF0D47A1),
+                topLeft = Offset(bLeft + bWidth, bTop + bHeight * 0.28f),
+                size = Size(w * 0.08f, bHeight * 0.44f),
+                cornerRadius = CornerRadius(2f, 2f)
+            )
+
+            // 3. Solar PV Grid Cells inside Battery (4 Cells)
+            val cellW = (bWidth - 12f) / 2f
+            val cellH = (bHeight - 12f) / 2f
+            val cells = listOf(
+                Offset(bLeft + 4f, bTop + 4f),
+                Offset(bLeft + 8f + cellW, bTop + 4f),
+                Offset(bLeft + 4f, bTop + 8f + cellH),
+                Offset(bLeft + 8f + cellW, bTop + 8f + cellH)
+            )
+            cells.forEach { pos ->
+                drawRect(
+                    color = Color(0xFFE3F2FD),
+                    topLeft = pos,
+                    size = Size(cellW, cellH)
+                )
+                drawRect(
+                    color = Color(0xFF1976D2),
+                    topLeft = pos,
+                    size = Size(cellW, cellH),
+                    style = Stroke(width = 1.2f)
+                )
+            }
+
+            // 4. Vivid Red Lightning Bolt (Center Dynamic Spark)
+            val bolt = Path().apply {
+                moveTo(w * 0.52f, h * 0.12f)
+                lineTo(w * 0.36f, h * 0.52f)
+                lineTo(w * 0.48f, h * 0.52f)
+                lineTo(w * 0.38f, h * 0.90f)
+                lineTo(w * 0.66f, h * 0.44f)
+                lineTo(w * 0.52f, h * 0.44f)
+                close()
+            }
+            // Drop shadow stroke for contrast
+            drawPath(path = bolt, color = Color.White, style = Stroke(width = 2.5f))
+            drawPath(path = bolt, color = Color(0xFFD32F2F))
+        }
+    }
+}
+
+// ============================================================================
+// 3. PERSISTENT STORAGE ENGINE
 // ============================================================================
 object AppLocalStorage {
     private const val PREFS_NAME = "NewAfzalSolar_DataStore"
@@ -250,7 +364,7 @@ object AppLocalStorage {
 }
 
 // ============================================================================
-// 3. MASTER APP CONTAINER (WITH PERSISTENT DATA & RESOLVED INSETS)
+// 4. MASTER APP CONTAINER WITH TWO-WAY REAL-TIME SYNC
 // ============================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,6 +373,7 @@ fun MainAppContainer() {
     var isAuthenticated by remember { mutableStateOf(false) }
     var currentTab by remember { mutableStateOf("billing") }
 
+    // Persistent State Lists
     var stockList by remember { mutableStateOf(AppLocalStorage.loadStock(context)) }
     var billList by remember { mutableStateOf(AppLocalStorage.loadBills(context)) }
     var customerList by remember { mutableStateOf(AppLocalStorage.loadCustomers(context)) }
@@ -270,13 +385,49 @@ fun MainAppContainer() {
         )
     }
 
+    // Modal state handlers
     var showNewInvoiceDialog by remember { mutableStateOf(false) }
+    var billToEdit by remember { mutableStateOf<BillRecord?>(null) }
+    var billToDelete by remember { mutableStateOf<BillRecord?>(null) }
+
     var showAddProductDialog by remember { mutableStateOf(false) }
     var productToEdit by remember { mutableStateOf<ProductItem?>(null) }
     var productToDelete by remember { mutableStateOf<ProductItem?>(null) }
+
     var showAddCustomerDialog by remember { mutableStateOf(false) }
     var customerToEdit by remember { mutableStateOf<CustomerAccount?>(null) }
     var customerToDelete by remember { mutableStateOf<CustomerAccount?>(null) }
+
+    // Synchronize Customer Edit with Invoice Payment
+    fun syncCustomerAndBills(updatedCustomer: CustomerAccount) {
+        val newCustomers = customerList.map { if (it.id == updatedCustomer.id) updatedCustomer else it }
+        customerList = newCustomers
+        AppLocalStorage.saveCustomers(context, newCustomers)
+
+        val matchingBill = billList.firstOrNull { it.customerName.trim().equals(updatedCustomer.name.trim(), ignoreCase = true) }
+        if (matchingBill != null) {
+            val adjustedPaid = (matchingBill.total - updatedCustomer.balanceDue).coerceAtLeast(0.0)
+            val updatedBill = matchingBill.copy(paid = adjustedPaid)
+            val newBills = billList.map { if (it.id == updatedBill.id) updatedBill else it }
+            billList = newBills
+            AppLocalStorage.saveBills(context, newBills)
+        }
+    }
+
+    fun syncBillAndCustomer(updatedBill: BillRecord) {
+        val newBills = billList.map { if (it.id == updatedBill.id) updatedBill else it }
+        billList = newBills
+        AppLocalStorage.saveBills(context, newBills)
+
+        val billDue = updatedBill.dueAmount
+        val existingCust = customerList.firstOrNull { it.name.trim().equals(updatedBill.customerName.trim(), ignoreCase = true) }
+        if (existingCust != null) {
+            val updatedCust = existingCust.copy(balanceDue = billDue, lastEntry = updatedBill.date)
+            val newCusts = customerList.map { if (it.id == updatedCust.id) updatedCust else it }
+            customerList = newCusts
+            AppLocalStorage.saveCustomers(context, newCusts)
+        }
+    }
 
     if (!isAuthenticated) {
         LoginTerminalScreen(onLoginSuccess = { isAuthenticated = true })
@@ -292,24 +443,12 @@ fun MainAppContainer() {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(vertical = 4.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFFD32F2F),
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Bolt,
-                                    contentDescription = "Solar Energy Emblem",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
+                        // The Original Vector Emblem
+                        OriginalAfzalSolarLogo(modifier = Modifier.size(42.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "New Afzal Battery Center & Solar",
+                                text = "New Afzal Battery & Solar Point",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -331,12 +470,12 @@ fun MainAppContainer() {
                         stockList = AppLocalStorage.loadStock(context)
                         billList = AppLocalStorage.loadBills(context)
                         customerList = AppLocalStorage.loadCustomers(context)
-                        Toast.makeText(context, "Data synced & verified with phone storage!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Data synchronized & verified!", Toast.LENGTH_SHORT).show()
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = Color.White)
                     }
                     IconButton(onClick = { isAuthenticated = false }) {
-                        Icon(Icons.Default.Lock, contentDescription = "Lock Terminal", tint = Color.White)
+                        Icon(Icons.Default.Lock, contentDescription = "Lock", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0D47A1))
@@ -384,7 +523,9 @@ fun MainAppContainer() {
             when (currentTab) {
                 "billing" -> BillingTabScreen(
                     bills = billList,
-                    onNewBill = { showNewInvoiceDialog = true }
+                    onNewBill = { showNewInvoiceDialog = true },
+                    onEditBill = { billToEdit = it },
+                    onDeleteBill = { billToDelete = it }
                 )
                 "inventory" -> InventoryTabScreen(
                     stockItems = stockList,
@@ -405,16 +546,130 @@ fun MainAppContainer() {
             }
         }
 
+        // ====================================================================
+        // MODALS
+        // ====================================================================
         if (showNewInvoiceDialog) {
-            NewInvoiceDialog(
+            InvoiceDialog(
+                title = "Generate Sales Invoice",
+                initialBill = null,
                 availableProducts = stockList,
                 onDismiss = { showNewInvoiceDialog = false },
                 onSave = { bill ->
                     val updated = listOf(bill) + billList
                     billList = updated
                     AppLocalStorage.saveBills(context, updated)
+
+                    val due = bill.dueAmount
+                    val existing = customerList.firstOrNull { it.name.trim().equals(bill.customerName.trim(), ignoreCase = true) }
+                    if (existing != null) {
+                        val updatedCust = existing.copy(balanceDue = due, lastEntry = bill.date)
+                        customerList = customerList.map { if (it.id == updatedCust.id) updatedCust else it }
+                        AppLocalStorage.saveCustomers(context, customerList)
+                    } else if (due > 0) {
+                        val newCust = CustomerAccount("C-${(100..999).random()}", bill.customerName, bill.phone, "Hasilpur City", due, bill.date)
+                        customerList = listOf(newCust) + customerList
+                        AppLocalStorage.saveCustomers(context, customerList)
+                    }
+
                     showNewInvoiceDialog = false
-                    Toast.makeText(context, "Invoice ${bill.id} saved permanently!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Invoice ${bill.id} saved & synced!", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        billToEdit?.let { bill ->
+            InvoiceDialog(
+                title = "Edit Invoice & Payment",
+                initialBill = bill,
+                availableProducts = stockList,
+                onDismiss = { billToEdit = null },
+                onSave = { updatedBill ->
+                    syncBillAndCustomer(updatedBill)
+                    billToEdit = null
+                    Toast.makeText(context, "Payment & Khata updated!", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        billToDelete?.let { bill ->
+            AlertDialog(
+                onDismissRequest = { billToDelete = null },
+                title = { Text("Delete Invoice?", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold) },
+                text = { Text("Delete invoice ${bill.id} for ${bill.customerName}?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val updated = billList.filter { it.id != bill.id }
+                            billList = updated
+                            AppLocalStorage.saveBills(context, updated)
+                            billToDelete = null
+                            Toast.makeText(context, "Invoice removed", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                    ) {
+                        Text("Delete", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { billToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showAddCustomerDialog) {
+            CustomerEditDialog(
+                title = "Register New Customer Account",
+                initialCustomer = null,
+                onDismiss = { showAddCustomerDialog = false },
+                onSave = { newCust ->
+                    val updated = listOf(newCust) + customerList
+                    customerList = updated
+                    AppLocalStorage.saveCustomers(context, updated)
+                    showAddCustomerDialog = false
+                    Toast.makeText(context, "Customer ${newCust.name} registered!", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        customerToEdit?.let { cust ->
+            CustomerEditDialog(
+                title = "Edit Customer & Udhar Balance",
+                initialCustomer = cust,
+                onDismiss = { customerToEdit = null },
+                onSave = { updatedCust ->
+                    syncCustomerAndBills(updatedCust)
+                    customerToEdit = null
+                    Toast.makeText(context, "Balance updated to PKR ${String.format("%,.0f", updatedCust.balanceDue)}!", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        customerToDelete?.let { cust ->
+            AlertDialog(
+                onDismissRequest = { customerToDelete = null },
+                title = { Text("Delete Account?", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold) },
+                text = { Text("Delete ${cust.name} and their transaction record?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val updated = customerList.filter { it.id != cust.id }
+                            customerList = updated
+                            AppLocalStorage.saveCustomers(context, updated)
+                            customerToDelete = null
+                            Toast.makeText(context, "Account removed", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                    ) {
+                        Text("Delete", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { customerToDelete = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
@@ -429,7 +684,7 @@ fun MainAppContainer() {
                     stockList = updated
                     AppLocalStorage.saveStock(context, updated)
                     showAddProductDialog = false
-                    Toast.makeText(context, "${newProd.name} saved to inventory!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "${newProd.name} added to stock!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -475,68 +730,11 @@ fun MainAppContainer() {
                 }
             )
         }
-
-        if (showAddCustomerDialog) {
-            CustomerEditDialog(
-                title = "Register New Customer Account",
-                initialCustomer = null,
-                onDismiss = { showAddCustomerDialog = false },
-                onSave = { newCust ->
-                    val updated = listOf(newCust) + customerList
-                    customerList = updated
-                    AppLocalStorage.saveCustomers(context, updated)
-                    showAddCustomerDialog = false
-                    Toast.makeText(context, "Customer ${newCust.name} registered!", Toast.LENGTH_SHORT).show()
-                }
-            )
-        }
-
-        customerToEdit?.let { cust ->
-            CustomerEditDialog(
-                title = "Edit Customer Account",
-                initialCustomer = cust,
-                onDismiss = { customerToEdit = null },
-                onSave = { updatedCust ->
-                    val updated = customerList.map { if (it.id == updatedCust.id) updatedCust else it }
-                    customerList = updated
-                    AppLocalStorage.saveCustomers(context, updated)
-                    customerToEdit = null
-                    Toast.makeText(context, "Account updated!", Toast.LENGTH_SHORT).show()
-                }
-            )
-        }
-
-        customerToDelete?.let { cust ->
-            AlertDialog(
-                onDismissRequest = { customerToDelete = null },
-                title = { Text("Delete Account?", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold) },
-                text = { Text("Delete ${cust.name} and their transaction history?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val updated = customerList.filter { it.id != cust.id }
-                            customerList = updated
-                            AppLocalStorage.saveCustomers(context, updated)
-                            customerToDelete = null
-                            Toast.makeText(context, "Account removed", Toast.LENGTH_SHORT).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
-                    ) {
-                        Text("Delete", color = Color.White)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { customerToDelete = null }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
     }
 }
 
 // ============================================================================
-// 4. PROFESSIONAL LOGIN TERMINAL
+// 5. LOGIN SCREEN WITH ORIGINAL LOGO
 // ============================================================================
 @Composable
 fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
@@ -563,23 +761,10 @@ fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFF0D47A1),
-                    modifier = Modifier.size(68.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Bolt,
-                            contentDescription = "Emblem",
-                            tint = Color.White,
-                            modifier = Modifier.size(38.dp)
-                        )
-                    }
-                }
+                OriginalAfzalSolarLogo(modifier = Modifier.size(76.dp))
                 Text(
-                    text = "New Afzal Solar Point",
-                    fontSize = 20.sp,
+                    text = "New Afzal Battery & Solar Point",
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF0D47A1)
                 )
@@ -650,12 +835,14 @@ fun LoginTerminalScreen(onLoginSuccess: () -> Unit) {
 }
 
 // ============================================================================
-// 5. TAB 1: POS BILLING & INVOICES
+// 6. TAB 1: POS BILLING & INVOICES
 // ============================================================================
 @Composable
 fun BillingTabScreen(
     bills: List<BillRecord>,
-    onNewBill: () -> Unit
+    onNewBill: () -> Unit,
+    onEditBill: (BillRecord) -> Unit,
+    onDeleteBill: (BillRecord) -> Unit
 ) {
     val totalSales = bills.sumOf { it.total }
     val cashReceived = bills.sumOf { it.paid }
@@ -708,7 +895,7 @@ fun BillingTabScreen(
             Text("Recent Invoices (${bills.size})", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1E293B))
         }
         items(bills) { bill ->
-            val due = bill.total - bill.paid
+            val due = bill.dueAmount
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -742,9 +929,37 @@ fun BillingTabScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text("Item: ${bill.itemName}", fontSize = 12.sp, color = Color(0xFF334155))
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Paid: PKR ${String.format("%,.0f", bill.paid)}", fontSize = 12.sp, color = Color(0xFF2E7D32))
                         Text("Total: PKR ${String.format("%,.0f", bill.total)}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF0D47A1))
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = Color(0xFFF1F5F9))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        OutlinedButton(
+                            onClick = { onDeleteBill(bill) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Delete", fontSize = 11.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { onEditBill(bill) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(13.dp), tint = Color.White)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit Payment", fontSize = 11.sp, color = Color.White)
+                        }
                     }
                 }
             }
@@ -753,7 +968,7 @@ fun BillingTabScreen(
 }
 
 // ============================================================================
-// 6. TAB 2: INVENTORY & PAKISTANI PRODUCTS
+// 7. TAB 2: INVENTORY & STOCK
 // ============================================================================
 @Composable
 fun InventoryTabScreen(
@@ -885,7 +1100,7 @@ fun InventoryTabScreen(
 }
 
 // ============================================================================
-// 7. TAB 3: CUSTOMER KHATA / UDHAR LEDGER
+// 8. TAB 3: CUSTOMER KHATA / UDHAR LEDGER
 // ============================================================================
 @Composable
 fun CustomerKhataTabScreen(
@@ -980,7 +1195,7 @@ fun CustomerKhataTabScreen(
 }
 
 // ============================================================================
-// 8. TAB 4: REPORTS & SUPPLIER / B2B LEDGER
+// 9. TAB 4: REPORTS & SUPPLIERS
 // ============================================================================
 @Composable
 fun ReportsAndSuppliersTabScreen(
@@ -1011,7 +1226,7 @@ fun ReportsAndSuppliersTabScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text("Executive Financial Summary", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
-                    Text("New Afzal Battery Center & Solar Point", fontSize = 11.sp, color = Color.Gray)
+                    Text("New Afzal Battery & Solar Point", fontSize = 11.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(10.dp))
                     Divider(color = Color(0xFFEFF3FF))
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1051,8 +1266,123 @@ fun ReportsAndSuppliersTabScreen(
 }
 
 // ============================================================================
-// 9. DIALOGS & HELPER WIDGETS
+// 10. DIALOGS
 // ============================================================================
+@Composable
+fun InvoiceDialog(
+    title: String,
+    initialBill: BillRecord?,
+    availableProducts: List<ProductItem>,
+    onDismiss: () -> Unit,
+    onSave: (BillRecord) -> Unit
+) {
+    var customerName by remember { mutableStateOf(initialBill?.customerName ?: "") }
+    var customerPhone by remember { mutableStateOf(initialBill?.phone ?: "") }
+    var itemName by remember { mutableStateOf(initialBill?.itemName ?: availableProducts.firstOrNull()?.name ?: "Solar Item") }
+    var quantityText by remember { mutableStateOf(initialBill?.qty?.toString() ?: "1") }
+    var rateText by remember { mutableStateOf(initialBill?.rate?.toInt()?.toString() ?: "1850") }
+    var paidText by remember { mutableStateOf(initialBill?.paid?.toInt()?.toString() ?: "") }
+
+    val qty = quantityText.toIntOrNull() ?: 1
+    val rate = rateText.toDoubleOrNull() ?: 0.0
+    val total = qty * rate
+    val paid = if (paidText.isBlank()) total else (paidText.toDoubleOrNull() ?: total)
+    val remainingDue = (total - paid).coerceAtLeast(0.0)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = null)
+                    }
+                }
+                Divider(color = Color(0xFFEFF3FF))
+                OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = customerPhone, onValueChange = { customerPhone = it }, label = { Text("Phone Number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = quantityText, onValueChange = { quantityText = it }, label = { Text("Qty") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(value = rateText, onValueChange = { rateText = it }, label = { Text("Rate (PKR)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1.3f), singleLine = true)
+                }
+                Surface(color = Color(0xFFEFF3FF), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Total Bill:", fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
+                        Text("PKR ${String.format("%,.0f", total)}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0D47A1))
+                    }
+                }
+                OutlinedTextField(
+                    value = paidText,
+                    onValueChange = { paidText = it },
+                    label = { Text("Cash Received (Payment)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                if (remainingDue > 0) {
+                    Surface(color = Color(0xFFFFEBEE), shape = RoundedCornerShape(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Udhar Remaining: PKR ${String.format("%,.0f", remainingDue)}",
+                            color = Color(0xFFD32F2F),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+                Button(
+                    onClick = {
+                        val billId = initialBill?.id ?: "INV-${(100..999).random()}"
+                        onSave(BillRecord(billId, customerName.ifBlank { "Walk-in Client" }, customerPhone.ifBlank { "0300-XXXXXXX" }, itemName, qty, rate, total, paid, initialBill?.date ?: "15 Oct 2026"))
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(46.dp)
+                ) {
+                    Text("Save & Sync Payment", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomerEditDialog(title: String, initialCustomer: CustomerAccount?, onDismiss: () -> Unit, onSave: (CustomerAccount) -> Unit) {
+    var name by remember { mutableStateOf(initialCustomer?.name ?: "") }
+    var phone by remember { mutableStateOf(initialCustomer?.phone ?: "") }
+    var area by remember { mutableStateOf(initialCustomer?.area ?: "Hasilpur City") }
+    var balanceText by remember { mutableStateOf(initialCustomer?.balanceDue?.toInt()?.toString() ?: "0") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = null)
+                    }
+                }
+                Divider(color = Color(0xFFEFF3FF))
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Customer Full Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number (WhatsApp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text("Area / Chak No.") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = balanceText, onValueChange = { balanceText = it }, label = { Text("Remaining Udhar Balance (PKR)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(
+                    onClick = {
+                        val bal = balanceText.toDoubleOrNull() ?: 0.0
+                        onSave(CustomerAccount(initialCustomer?.id ?: "C-${(100..999).random()}", name.ifBlank { "Client" }, phone.ifBlank { "0300-XXXXXXX" }, area, bal, "15 Oct 2026"))
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(46.dp)
+                ) {
+                    Text("Save & Sync to Khata", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun ProductEditDialog(title: String, initialProduct: ProductItem?, onDismiss: () -> Unit, onSave: (ProductItem) -> Unit) {
     var name by remember { mutableStateOf(initialProduct?.name ?: "") }
@@ -1105,94 +1435,6 @@ fun ProductEditDialog(title: String, initialProduct: ProductItem?, onDismiss: ()
                     modifier = Modifier.fillMaxWidth().height(46.dp)
                 ) {
                     Text("Save to Inventory", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NewInvoiceDialog(availableProducts: List<ProductItem>, onDismiss: () -> Unit, onSave: (BillRecord) -> Unit) {
-    var customerName by remember { mutableStateOf("") }
-    var customerPhone by remember { mutableStateOf("") }
-    var selectedProduct by remember { mutableStateOf(availableProducts.firstOrNull()) }
-    var quantityText by remember { mutableStateOf("1") }
-    var rateText by remember { mutableStateOf(selectedProduct?.unitPrice?.toInt()?.toString() ?: "1850") }
-    var paidText by remember { mutableStateOf("") }
-    val qty = quantityText.toIntOrNull() ?: 1
-    val rate = rateText.toDoubleOrNull() ?: 0.0
-    val total = qty * rate
-    val paid = paidText.toDoubleOrNull() ?: total
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Generate Sales Invoice", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = null)
-                    }
-                }
-                Divider(color = Color(0xFFEFF3FF))
-                OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = customerPhone, onValueChange = { customerPhone = it }, label = { Text("Phone Number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = quantityText, onValueChange = { quantityText = it }, label = { Text("Qty") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(value = rateText, onValueChange = { rateText = it }, label = { Text("Rate (PKR)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1.3f), singleLine = true)
-                }
-                Surface(color = Color(0xFFEFF3FF), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total Bill:", fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
-                        Text("PKR ${String.format("%,.0f", total)}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0D47A1))
-                    }
-                }
-                OutlinedTextField(value = paidText, onValueChange = { paidText = it }, label = { Text("Cash Received") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
-                    onClick = {
-                        onSave(BillRecord("INV-${(100..999).random()}", customerName.ifBlank { "Walk-in Client" }, customerPhone.ifBlank { "0300-XXXXXXX" }, "${selectedProduct?.name ?: "Solar"} (x$qty)", qty, rate, total, paid, "15 Oct 2026"))
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(46.dp)
-                ) {
-                    Text("Save & Print Invoice", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CustomerEditDialog(title: String, initialCustomer: CustomerAccount?, onDismiss: () -> Unit, onSave: (CustomerAccount) -> Unit) {
-    var name by remember { mutableStateOf(initialCustomer?.name ?: "") }
-    var phone by remember { mutableStateOf(initialCustomer?.phone ?: "") }
-    var area by remember { mutableStateOf(initialCustomer?.area ?: "Vehari Road, Hasilpur") }
-    var balanceText by remember { mutableStateOf(initialCustomer?.balanceDue?.toInt()?.toString() ?: "0") }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = null)
-                    }
-                }
-                Divider(color = Color(0xFFEFF3FF))
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Customer Full Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number (WhatsApp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text("Area / Chak No.") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = balanceText, onValueChange = { balanceText = it }, label = { Text("Opening Udhar Balance (PKR)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
-                    onClick = {
-                        val bal = balanceText.toDoubleOrNull() ?: 0.0
-                        onSave(CustomerAccount(initialCustomer?.id ?: "C-${(100..999).random()}", name.ifBlank { "Client" }, phone.ifBlank { "0300-XXXXXXX" }, area, bal, "15 Oct 2026"))
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D47A1)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(46.dp)
-                ) {
-                    Text("Save Customer Account", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
