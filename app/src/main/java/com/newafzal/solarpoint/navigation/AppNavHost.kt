@@ -4,11 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -16,13 +13,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-
-sealed class Screen(val route: String, val titleUrdu: String, val icon: androidx.compose.ui.graphics.vector.ImageVector?) {
-    object Billing : Screen("billing", "سیل و بلنگ", Icons.Default.ShoppingCart)
-    object Inventory : Screen("inventory", "سٹاک", Icons.Default.Storage)
-    object Khata : Screen("khata", "کھاتہ", Icons.Default.Book)
-    object Reports : Screen("reports", "رپورٹس", Icons.Default.BarChart)
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
